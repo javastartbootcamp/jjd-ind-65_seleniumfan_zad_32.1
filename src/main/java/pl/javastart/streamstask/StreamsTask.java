@@ -3,18 +3,18 @@ package pl.javastart.streamstask;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class StreamsTask {
-    List<User> users = TestData.getUsers();
-    List<Expense> expenses = TestData.getExpenses();
-
     public static void main(String[] args) {
         StreamsTask streamsTask = new StreamsTask();
         streamsTask.run();
     }
 
     private void run() {
+        List<User> users = TestData.getUsers();
+        List<Expense> expenses = TestData.getExpenses();
         Collection<User> women = findWomen(users);
         Double averageMenAge = averageMenAge(users);
         Map<Long, List<Expense>> expensesByUserId = groupExpensesByUserId(users, expenses);
@@ -24,20 +24,20 @@ public class StreamsTask {
     // metoda powinna zwracać listę kobiet (sprawdzając, czy imię kończy się na "a")
     Collection<User> findWomen(Collection<User> users) {
         return users.stream()
-                .filter(this::checkSex)
+                .filter(this::isFemale)
                 .collect(Collectors.toList());
     }
 
     // metoda powinna zwracać średni wiek mężczyzn (sprawdzając, czy imię nie kończy się na "a")
     Double averageMenAge(Collection<User> users) {
         return users.stream()
-                .filter(user -> !checkSex(user)) //check sex
+                .filter(user -> !isFemale(user)) //check sex
                 .mapToDouble(User::getAge)
                 .average()
                 .orElse(0.0);
     }
 
-    private boolean checkSex(User user) {
+    private boolean isFemale(User user) {
         return user.getName().endsWith("a");
     }
 
@@ -46,9 +46,7 @@ public class StreamsTask {
         return users.stream()
                 .collect(Collectors.toMap(
                         User::getId,
-                        user -> expenses.stream()
-                                .filter(expense -> expense.getUserId().equals(user.getId()))
-                                .collect(Collectors.toList())
+                        user -> filterExpensesForUser(expenses, user)
                 ));
     }
 
@@ -57,10 +55,14 @@ public class StreamsTask {
     Map<User, List<Expense>> groupExpensesByUser(Collection<User> users, List<Expense> expenses) {
         return users.stream()
                 .collect(Collectors.toMap(
-                        user -> user,
-                        user -> expenses.stream()
-                                .filter(expense -> expense.getUserId().equals(user.getId()))
-                                .collect(Collectors.toList())
+                        Function.identity(),
+                        user -> filterExpensesForUser(expenses, user)
                 ));
+    }
+
+    private static List<Expense> filterExpensesForUser(List<Expense> expenses, User user) {
+        return expenses.stream()
+                .filter(expense -> expense.getUserId().equals(user.getId()))
+                .collect(Collectors.toList());
     }
 }
